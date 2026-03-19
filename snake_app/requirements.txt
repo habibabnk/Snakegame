@@ -1,0 +1,4 @@
+flask==2.3.3
+numpy>=1.21.0
+pytest==7.4.0
+tinydb>=4.7.0

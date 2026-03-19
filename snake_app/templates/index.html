@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake AI — A* vs Q-Learning</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <div class="container">
+        <header>
+            <div class="header-badge">AI RESEARCH</div>
+            <h1>Snake <span class="accent">AI</span></h1>
+            <p class="subtitle">A* Pathfinding <span class="dim">vs</span> Q-Learning Reinforcement Learning</p>
+        </header>
+
+        <main>
+            <!-- Controls Bar -->
+            <section class="controls-bar">
+                <div class="algo-select-wrap">
+                    <span class="label-text">ALGORITHM</span>
+                    <select id="algorithm" class="algo-select">
+                        <option value="astar">A* Pathfinding</option>
+                        <option value="rl">Q-Learning RL</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <button id="resetBtn" class="btn btn-secondary">↺ Reset</button>
+                    <button id="stepBtn" class="btn btn-secondary">▶ Step</button>
+                    <button id="runBtn" class="btn btn-primary">⚡ Run</button>
+                    <button id="stopBtn" class="btn btn-danger" disabled>■ Stop</button>
+                </div>
+
+                <div class="speed-wrap">
+                    <span class="label-text">SPEED</span>
+                    <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
+                    <span id="speedLabel" class="dim">5×</span>
+                </div>
+
+                <div class="btn-group">
+                    <button id="trainBtn" class="btn btn-train">⚙ Train RL</button>
+                    <button id="compareBtn" class="btn btn-compare">⊞ Compare ×10</button>
+                    <button id="compareDetailedBtn" class="btn btn-compare">⊞ Compare ×50</button>
+                </div>
+            </section>
+
+            <!-- Main Game Area -->
+            <section class="game-area">
+                <!-- Canvas + Overlay -->
+                <div class="canvas-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">GAME BOARD</span>
+                        <span id="algoTag" class="algo-tag">A*</span>
+                    </div>
+                    <div class="canvas-wrap">
+                        <canvas id="gameCanvas" width="300" height="300"></canvas>
+                        <div id="overlayMsg" class="overlay-msg" style="display:none">
+                            <span id="overlayText"></span>
+                        </div>
+                    </div>
+                    <div id="gameStatus" class="status-bar status-ready">● READY</div>
+                </div>
+
+                <!-- Metrics Panel -->
+                <div class="metrics-panel">
+                    <div class="panel-header">
+                        <span class="panel-title">METRICS</span>
+                    </div>
+
+                    <div class="metric-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">SCORE</div>
+                            <div class="metric-value" id="score">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">STEPS</div>
+                            <div class="metric-value" id="steps">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">TIME</div>
+                            <div class="metric-value" id="time">0.0s</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">EFFICIENCY</div>
+                            <div class="metric-value" id="efficiency">—</div>
+                        </div>
+                    </div>
+
+                    <!-- Score history mini-chart -->
+                    <div class="chart-section">
+                        <div class="chart-label">SCORE HISTORY (last 20 games)</div>
+                        <canvas id="historyChart" width="280" height="80"></canvas>
+                    </div>
+
+                    <!-- Algorithm info -->
+                    <div id="algoInfo" class="algo-info">
+                        <div class="algo-info-title">A* PATHFINDING</div>
+                        <div class="algo-info-body">
+                            Finds optimal path to food using Manhattan heuristic.
+                            Enhanced with flood-fill survival check to prevent self-trapping.
+                        </div>
+                        <div class="algo-tags-row">
+                            <span class="tag">Optimal</span>
+                            <span class="tag">No Training</span>
+                            <span class="tag">Flood-Fill Safety</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Training Panel -->
+            <section id="trainingPanel" class="training-panel" style="display:none">
+                <div class="panel-header">
+                    <span class="panel-title">⚙ TRAINING Q-LEARNING AGENT</span>
+                    <span id="trainingEpisodeCount" class="dim">0 / 2000 episodes</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                    <div class="progress-glow" id="progressGlow" style="width:0%"></div>
+                </div>
+                <div class="training-stats-row">
+                    <span id="trainingMessage" class="training-msg">Initializing...</span>
+                    <span id="trainingEpsilon" class="dim">ε = 1.00</span>
+                </div>
+                <!-- Reward chart -->
+                <canvas id="rewardChart" width="600" height="80" class="reward-chart"></canvas>
+            </section>
+
+            <!-- Comparison Results -->
+            <section id="comparisonResults" class="comparison-panel" style="display:none">
+                <div class="panel-header">
+                    <span class="panel-title">⊞ COMPARISON RESULTS</span>
+                    <span id="gamesCount" class="dim"></span>
+                </div>
+
+                <div id="winnerBanner" class="winner-banner"></div>
+
+                <div class="table-wrap">
+                    <table class="stats-table">
+                        <thead>
+                            <tr>
+                                <th>METRIC</th>
+                                <th>A* PATHFINDING</th>
+                                <th>Q-LEARNING</th>
+                                <th>WINNER</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsBody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>

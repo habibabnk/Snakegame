@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <button onclick="testReset()">Test Reset</button>
+    <button onclick="testStep()">Test Step</button>
+    <div id="result"></div>
+    
+    <script>
+        async function testReset() {
+            try {
+                const response = await fetch('/api/reset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        game_id: 'debug',
+                        algorithm: 'astar'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                console.log('Reset result:', result);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testStep() {
+            try {
+                const response = await fetch('/api/step', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        game_id: 'debug',
+                        algorithm: 'astar'
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                console.log('Step result:', result);
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>
