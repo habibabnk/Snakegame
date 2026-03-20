@@ -33,7 +33,11 @@ class QLearningAgent:
         self.epsilon = epsilon
         self.q_table: Dict = {}
         self.training_episodes = 0
-        self.q_table_file = "q_table.json"
+        # Absolute path so the file is found regardless of working directory
+        self.q_table_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'q_table.json'
+        )
         
         # Load existing Q-table if available
         self.load_q_table()
@@ -115,17 +119,15 @@ class QLearningAgent:
             # Exploration: choose random valid action
             return random.choice(valid_actions)
         else:
-            # Exploitation: choose best valid action
-            best_action = None
-            best_q_value = -float('inf')
-            
-            for action in valid_actions:
-                q_value = self.get_q_value(state_key, action)
-                if q_value > best_q_value:
-                    best_q_value = q_value
-                    best_action = action
-            
-            return best_action
+            # Exploitation: choose best valid action; break ties randomly
+            best_q_value = max(
+                self.get_q_value(state_key, a) for a in valid_actions
+            )
+            best_actions = [
+                a for a in valid_actions
+                if self.get_q_value(state_key, a) == best_q_value
+            ]
+            return random.choice(best_actions)
     
     def calculate_reward(self, old_state: Dict, new_state: Dict, 
                         ate_food: bool, game_over: bool) -> float:
