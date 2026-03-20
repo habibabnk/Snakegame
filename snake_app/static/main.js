@@ -92,10 +92,7 @@ async function loadHistoryFromDB() {
     try {
         const resp = await fetch('/api/history?limit=20');
         const data = await resp.json();
-        if (data.scores && data.scores.length > 0) {
-            scoreHistory = data.scores.map(s => s.score);
-            drawHistoryChart();
-        }
+        // Do not pre-load scoreHistory from DB — chart tracks current session only
         // Restore last training info if available
         if (data.last_training && data.last_training.episodes) {
             const lt = data.last_training;
