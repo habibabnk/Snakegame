@@ -8,18 +8,72 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="bg-grid"></div>
-
     <div class="container">
+
+        <!-- HEADER -->
         <header>
-            <div class="header-badge">AI RESEARCH</div>
+            <div class="header-top-row">
+                <div class="header-badge">AI RESEARCH</div>
+                <div class="header-controls-right">
+                    <button id="muteBtn" class="icon-btn sound-btn" title="Toggle sound (M)">♩</button>
+                    <button id="settingsBtn" class="icon-btn" title="Settings">≡</button>
+                </div>
+            </div>
             <h1>Snake <span class="accent">AI</span></h1>
             <p class="subtitle">A* Pathfinding <span class="dim">vs</span> Q-Learning Reinforcement Learning</p>
+
+            <div class="mode-toggle-wrap">
+                <span class="mode-label">Single Game</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="raceModeToggle">
+                    <span class="toggle-track">
+                        <span class="toggle-thumb"></span>
+                    </span>
+                </label>
+                <span class="mode-label">Race Mode</span>
+            </div>
         </header>
 
+        <!-- SETTINGS PANEL -->
+        <div id="settingsPanel" class="settings-panel" style="display:none">
+            <div class="settings-header">
+                <span class="panel-title">SETTINGS</span>
+                <button id="closeSettings" class="icon-btn-sm">✕</button>
+            </div>
+            <div class="settings-grid">
+                <label class="settings-row">
+                    <span>Sound Effects</span>
+                    <input type="checkbox" id="settingSound" checked class="settings-checkbox">
+                </label>
+                <label class="settings-row">
+                    <span>Particle Effects</span>
+                    <input type="checkbox" id="settingParticles" checked class="settings-checkbox">
+                </label>
+                <label class="settings-row">
+                    <span>Show FPS</span>
+                    <input type="checkbox" id="settingFPS" class="settings-checkbox">
+                </label>
+                <label class="settings-row">
+                    <span>Snake Eyes</span>
+                    <input type="checkbox" id="settingEyes" checked class="settings-checkbox">
+                </label>
+            </div>
+            <div class="settings-shortcuts">
+                <div class="shortcut-title">KEYBOARD SHORTCUTS</div>
+                <div class="shortcut-grid">
+                    <span>Space</span><span>Run / Pause</span>
+                    <span>R</span><span>Reset</span>
+                    <span>S</span><span>Step</span>
+                    <span>M</span><span>Mute</span>
+                    <span>1</span><span>Single mode</span>
+                    <span>2</span><span>Race mode</span>
+                </div>
+            </div>
+        </div>
+
         <main>
-            <!-- Controls Bar -->
-            <section class="controls-bar">
+            <!-- CONTROLS BAR — Single Mode -->
+            <section class="controls-bar" id="singleControls">
                 <div class="algo-select-wrap">
                     <span class="label-text">ALGORITHM</span>
                     <select id="algorithm" class="algo-select">
@@ -27,82 +81,101 @@
                         <option value="rl">Q-Learning RL</option>
                     </select>
                 </div>
-
                 <div class="btn-group">
-                    <button id="resetBtn" class="btn btn-secondary">↺ Reset</button>
-                    <button id="stepBtn" class="btn btn-secondary">▶ Step</button>
-                    <button id="runBtn" class="btn btn-primary">⚡ Run</button>
-                    <button id="stopBtn" class="btn btn-danger" disabled>■ Stop</button>
+                    <button id="resetBtn" class="btn btn-secondary" title="Reset game (R)">↺ Reset</button>
+                    <button id="stepBtn" class="btn btn-step" title="Single step (S)">▶ Step</button>
+                    <button id="runBtn" class="btn btn-primary" title="Run game (Space)">Run</button>
+                    <button id="stopBtn" class="btn btn-danger" disabled title="Stop">■ Stop</button>
                 </div>
-
                 <div class="speed-wrap">
                     <span class="label-text">SPEED</span>
-                    <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
-                    <span id="speedLabel" class="dim">5×</span>
+                    <div class="slider-with-ticks">
+                        <input type="range" id="speedSlider" min="1" max="10" value="5" class="slider">
+                        <div class="tick-marks">
+                            <span>1×</span><span>5×</span><span>10×</span>
+                        </div>
+                    </div>
+                    <span id="speedLabel" class="speed-badge">5×</span>
                 </div>
-
                 <div class="btn-group">
-                    <button id="trainBtn" class="btn btn-train">⚙ Train RL</button>
-                    <button id="compareBtn" class="btn btn-compare">⊞ Compare ×10</button>
-                    <button id="compareDetailedBtn" class="btn btn-compare">⊞ Compare ×50</button>
+                    <button id="trainBtn" class="btn btn-train" title="Train Q-Learning (2000 episodes)">Train RL</button>
+                    <button id="compareBtn" class="btn btn-compare" title="Compare algorithms over 10 games">Compare ×10</button>
+                    <button id="compareDetailedBtn" class="btn btn-compare" title="Compare algorithms over 50 games">Compare ×50</button>
                 </div>
             </section>
 
-            <!-- Main Game Area -->
-            <section class="game-area">
-                <!-- Canvas + Overlay -->
+            <!-- CONTROLS BAR — Race Mode -->
+            <section class="controls-bar controls-race" id="raceControls" style="display:none">
+                <div class="btn-group">
+                    <button id="raceResetBtn" class="btn btn-secondary">↺ Reset Both</button>
+                    <button id="raceStartBtn" class="btn btn-race">Start Race</button>
+                    <button id="raceStopBtn" class="btn btn-danger" disabled>■ Stop Race</button>
+                </div>
+                <div class="speed-wrap">
+                    <span class="label-text">SPEED</span>
+                    <div class="slider-with-ticks">
+                        <input type="range" id="raceSpeedSlider" min="1" max="10" value="5" class="slider">
+                        <div class="tick-marks">
+                            <span>1×</span><span>5×</span><span>10×</span>
+                        </div>
+                    </div>
+                    <span id="raceSpeedLabel" class="speed-badge">5×</span>
+                </div>
+                <div class="race-record">
+                    <span class="label-text">RACE RECORD</span>
+                    <span id="raceRecord" class="race-record-val">A* <span class="dim">0</span> — <span class="dim">0</span> RL</span>
+                </div>
+            </section>
+
+            <!-- SINGLE GAME AREA -->
+            <section class="game-area" id="singleArea">
                 <div class="canvas-panel">
                     <div class="panel-header">
                         <span class="panel-title">GAME BOARD</span>
-                        <span id="algoTag" class="algo-tag">A*</span>
+                        <span id="algoTag" class="algo-tag algo-tag-astar">A*</span>
                     </div>
                     <div class="canvas-wrap">
                         <canvas id="gameCanvas" width="300" height="300"></canvas>
                         <div id="overlayMsg" class="overlay-msg" style="display:none">
-                            <span id="overlayText"></span>
+                            <div class="overlay-inner">
+                                <span id="overlayText"></span>
+                            </div>
                         </div>
+                        <div id="fpsCounter" class="fps-counter" style="display:none">0 FPS</div>
                     </div>
                     <div id="gameStatus" class="status-bar status-ready">● READY</div>
                 </div>
 
-                <!-- Metrics Panel -->
                 <div class="metrics-panel">
                     <div class="panel-header">
                         <span class="panel-title">METRICS</span>
+                        <span id="bestScore" class="best-badge" style="display:none">Best: <span id="bestScoreVal">0</span></span>
                     </div>
-
                     <div class="metric-grid">
-                        <div class="metric-card">
+                        <div class="metric-card metric-score">
                             <div class="metric-label">SCORE</div>
                             <div class="metric-value" id="score">0</div>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card metric-steps">
                             <div class="metric-label">STEPS</div>
                             <div class="metric-value" id="steps">0</div>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card metric-time">
                             <div class="metric-label">TIME</div>
                             <div class="metric-value" id="time">0.0s</div>
                         </div>
-                        <div class="metric-card">
-                            <div class="metric-label">EFFICIENCY</div>
+                        <div class="metric-card metric-eff">
+                            <div class="metric-label">EFF.</div>
                             <div class="metric-value" id="efficiency">—</div>
                         </div>
                     </div>
-
-                    <!-- Score history mini-chart -->
                     <div class="chart-section">
                         <div class="chart-label">SCORE HISTORY (last 20 games)</div>
                         <canvas id="historyChart" width="280" height="80"></canvas>
                     </div>
-
-                    <!-- Algorithm info -->
                     <div id="algoInfo" class="algo-info">
                         <div class="algo-info-title">A* PATHFINDING</div>
-                        <div class="algo-info-body">
-                            Finds optimal path to food using Manhattan heuristic.
-                            Enhanced with flood-fill survival check to prevent self-trapping.
-                        </div>
+                        <div class="algo-info-body">Finds optimal path to food using Manhattan heuristic. Enhanced with flood-fill survival check to prevent self-trapping.</div>
                         <div class="algo-tags-row">
                             <span class="tag">Optimal</span>
                             <span class="tag">No Training</span>
@@ -112,33 +185,118 @@
                 </div>
             </section>
 
-            <!-- Training Panel -->
+            <!-- RACE MODE AREA -->
+            <section class="race-area" id="raceArea" style="display:none">
+                <div id="countdownOverlay" class="countdown-overlay" style="display:none">
+                    <div id="countdownNum" class="countdown-num">3</div>
+                </div>
+
+                <div class="race-layout">
+                    <!-- A* Board -->
+                    <div class="race-board" id="astarBoard">
+                        <div class="race-board-header astar-header">
+                            <span class="race-algo-name">A* PATHFINDING</span>
+                            <span class="race-algo-tag astar-tag">A*</span>
+                        </div>
+                        <div class="race-canvas-wrap">
+                            <div class="race-canvas-inner">
+                                <canvas id="astarCanvas" width="300" height="300"></canvas>
+                                <div id="astarOverlay" class="overlay-msg" style="display:none">
+                                    <div class="overlay-inner"><span id="astarOverlayText"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="race-metrics-row">
+                            <div class="race-metric">
+                                <span class="race-metric-label">score</span>
+                                <span class="race-metric-val" id="astarScore">0</span>
+                            </div>
+                            <div class="race-metric">
+                                <span class="race-metric-label">steps</span>
+                                <span class="race-metric-val" id="astarSteps">0</span>
+                            </div>
+                        </div>
+                        <div id="astarStatus" class="status-bar status-ready">● READY</div>
+                    </div>
+
+                    <!-- VS Divider -->
+                    <div class="vs-divider">
+                        <div class="vs-badge" id="vsBadge">VS</div>
+                        <div class="live-diff" id="liveDiff" style="display:none">
+                            <div class="diff-label">LEAD</div>
+                            <div class="diff-val" id="diffVal">—</div>
+                        </div>
+                        <div class="vs-chart-wrap">
+                            <canvas id="raceChart" width="80" height="200"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- RL Board -->
+                    <div class="race-board" id="rlBoard">
+                        <div class="race-board-header rl-header">
+                            <span class="race-algo-name">Q-LEARNING RL</span>
+                            <span class="race-algo-tag rl-tag">RL</span>
+                        </div>
+                        <div class="race-canvas-wrap">
+                            <div class="race-canvas-inner">
+                                <canvas id="rlCanvas" width="300" height="300"></canvas>
+                                <div id="rlOverlay" class="overlay-msg" style="display:none">
+                                    <div class="overlay-inner"><span id="rlOverlayText"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="race-metrics-row">
+                            <div class="race-metric">
+                                <span class="race-metric-label">score</span>
+                                <span class="race-metric-val" id="rlScore">0</span>
+                            </div>
+                            <div class="race-metric">
+                                <span class="race-metric-label">steps</span>
+                                <span class="race-metric-val" id="rlSteps">0</span>
+                            </div>
+                        </div>
+                        <div id="rlStatus" class="status-bar status-ready">● READY</div>
+                    </div>
+                </div>
+
+                <div id="raceBanner" class="race-winner-banner" style="display:none"></div>
+            </section>
+
+            <!-- TRAINING PANEL -->
             <section id="trainingPanel" class="training-panel" style="display:none">
                 <div class="panel-header">
-                    <span class="panel-title">⚙ TRAINING Q-LEARNING AGENT</span>
+                    <span class="panel-title">TRAINING Q-LEARNING AGENT</span>
                     <span id="trainingEpisodeCount" class="dim">0 / 2000 episodes</span>
                 </div>
                 <div class="progress-track">
                     <div class="progress-fill" id="progressFill" style="width:0%"></div>
-                    <div class="progress-glow" id="progressGlow" style="width:0%"></div>
                 </div>
                 <div class="training-stats-row">
                     <span id="trainingMessage" class="training-msg">Initializing...</span>
                     <span id="trainingEpsilon" class="dim">ε = 1.00</span>
                 </div>
-                <!-- Reward chart -->
-                <canvas id="rewardChart" width="600" height="80" class="reward-chart"></canvas>
+                <div class="reward-chart-wrap">
+                    <canvas id="rewardChart" width="900" height="160" class="reward-chart"></canvas>
+                    <div id="rewardTooltip" class="reward-tooltip" style="display:none">
+                        <div class="rt-episode"></div>
+                        <div class="rt-score"></div>
+                        <div class="rt-epsilon"></div>
+                    </div>
+                </div>
+                <div id="rewardStats" class="reward-stats" style="display:none">
+                    <div class="rs-item"><span class="rs-label">AVG</span><span class="rs-val" id="rsAvg">—</span></div>
+                    <div class="rs-item"><span class="rs-label">BEST</span><span class="rs-val rs-best" id="rsBest">—</span></div>
+                    <div class="rs-item"><span class="rs-label">TREND</span><span class="rs-val" id="rsTrend">—</span></div>
+                </div>
             </section>
 
-            <!-- Comparison Results -->
+            <!-- COMPARISON PANEL -->
             <section id="comparisonResults" class="comparison-panel" style="display:none">
                 <div class="panel-header">
-                    <span class="panel-title">⊞ COMPARISON RESULTS</span>
+                    <span class="panel-title">COMPARISON RESULTS</span>
                     <span id="gamesCount" class="dim"></span>
                 </div>
-
                 <div id="winnerBanner" class="winner-banner"></div>
-
                 <div class="table-wrap">
                     <table class="stats-table">
                         <thead>
@@ -156,6 +314,7 @@
         </main>
     </div>
 
+    <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none"></canvas>
     <script src="/static/main.js"></script>
 </body>
 </html>
