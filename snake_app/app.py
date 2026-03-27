@@ -138,10 +138,10 @@ def train_rl():
     if _shared_q_table:
         temp_agent.q_table = _shared_q_table
         temp_agent.training_episodes = _shared_training_episodes
-        temp_agent.epsilon = max(0.1, _shared_epsilon)
+        # epsilon is intentionally not carried over — train() resets it to 1.0
 
     start_time = time.time()
-    history = temp_agent.train(episodes)
+    history = temp_agent.train(episodes, reset_epsilon=True)
     training_time = round(time.time() - start_time, 2)
 
     _shared_q_table = temp_agent.q_table
@@ -173,16 +173,29 @@ def train_rl():
 
 @app.route('/api/compare', methods=['POST'])
 def compare_algorithms():
-    data = request.get_json()
-    num_games = data.get('num_games', 10)
-    stats = stats_manager.run_comparison(num_games, q_table=_shared_q_table or None)
-    return jsonify({
-        'astar': stats.get('astar', {}),
-        'rl': stats.get('rl', {}),
-        'statistics': stats,
-        'winner': stats_manager.get_winner(),
-        'num_games': num_games
-    })
+    try:
+        data = request.get_json() or {}
+        num_games = min(data.get('num_games', 10), 50)
+        stats = stats_manager.run_comparison(num_games, q_table=_shared_q_table or None)
+        astar_stats = stats.get('astar', {})
+        rl_stats = stats.get('rl', {})
+        for s in [astar_stats, rl_stats]:
+            s.setdefault('avg_score', 0)
+            s.setdefault('max_score', 0)
+            s.setdefault('min_score', 0)
+            s.setdefault('avg_steps', 0)
+            s.setdefault('success_rate', 0)
+        return jsonify({
+            'astar': astar_stats,
+            'rl': rl_stats,
+            'statistics': stats,
+            'winner': stats_manager.get_winner() or 'tie',
+            'num_games': num_games
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/history', methods=['GET'])
@@ -206,6 +219,23 @@ def get_stats():
 @app.route('/api/results', methods=['GET'])
 def get_results():
     return jsonify(stats_manager.export_results())
+
+
+@app.route('/api/reset_qtable', methods=['POST'])
+def reset_qtable():
+    global _shared_q_table, _shared_training_episodes, _shared_epsilon
+    _shared_q_table = {}
+    _shared_training_episodes = 0
+    _shared_epsilon = 1.0
+    for agent in rl_agents.values():
+        agent.q_table = {}
+        agent.training_episodes = 0
+        agent.epsilon = 1.0
+    import os
+    q_file = 'q_table.json'
+    if os.path.exists(q_file):
+        os.remove(q_file)
+    return jsonify({'status': 'q_table_reset'})
 
 
 @app.route('/api/clear', methods=['POST'])

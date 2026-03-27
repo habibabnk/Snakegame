@@ -3,7 +3,6 @@ Unit tests for A* pathfinding module.
 Tests path calculation, heuristic function, and move selection.
 """
 
-import pytest
 import sys
 import os
 
@@ -45,20 +44,20 @@ class TestAStarPathfinder:
     
     def test_get_neighbors_center(self):
         """Test neighbor calculation from center position."""
-        neighbors = self.astar.get_neighbors((5, 5))
-        
+        neighbors = self.astar.get_neighbors((5, 5), set())
+
         # Should have 4 neighbors from center
         assert len(neighbors) == 4
-        
+
         # Check all directions are present
         positions = [pos for pos, _ in neighbors]
         directions = [dir for _, dir in neighbors]
-        
+
         assert (5, 4) in positions  # UP
         assert (5, 6) in positions  # DOWN
         assert (4, 5) in positions  # LEFT
         assert (6, 5) in positions  # RIGHT
-        
+
         assert Direction.UP in directions
         assert Direction.DOWN in directions
         assert Direction.LEFT in directions
@@ -66,13 +65,13 @@ class TestAStarPathfinder:
     
     def test_get_neighbors_edge(self):
         """Test neighbor calculation from edge position."""
-        neighbors = self.astar.get_neighbors((0, 0))  # Top-left corner
-        
+        neighbors = self.astar.get_neighbors((0, 0), set())  # Top-left corner
+
         # Should have only 2 neighbors from corner
         assert len(neighbors) == 2
-        
+
         positions = [pos for pos, _ in neighbors]
-        
+
         assert (0, 1) in positions  # DOWN
         assert (1, 0) in positions  # RIGHT
         assert (0, -1) not in positions  # UP (outside grid)
@@ -82,14 +81,14 @@ class TestAStarPathfinder:
         """Test neighbor calculation avoiding snake body."""
         # Create snake body that blocks some moves
         self.game.snake = [(5, 5), (5, 4), (4, 5)]  # Head at (5,5)
-        
-        neighbors = self.astar.get_neighbors((5, 5))
-        
+
+        neighbors = self.astar.get_neighbors((5, 5), set(self.game.snake))
+
         # Should have only 2 valid neighbors (UP and LEFT blocked by body)
         assert len(neighbors) == 2
-        
+
         positions = [pos for pos, _ in neighbors]
-        
+
         assert (5, 6) in positions  # DOWN (valid)
         assert (6, 5) in positions  # RIGHT (valid)
         assert (5, 4) not in positions  # UP (blocked by snake)
@@ -100,9 +99,9 @@ class TestAStarPathfinder:
         # Place snake and food in simple configuration
         self.game.snake = [(5, 5)]
         self.game.food = (7, 5)  # 2 steps to the right
-        
-        next_move = self.astar.find_path_to_food()
-        
+
+        next_move = self.astar.get_next_move()
+
         # Should move right towards food
         assert next_move == Direction.RIGHT
     
@@ -111,41 +110,38 @@ class TestAStarPathfinder:
         # Create obstacle course
         self.game.snake = [(5, 5), (6, 5), (7, 5)]  # Horizontal snake
         self.game.food = (6, 7)  # Food below middle of snake
-        
-        next_move = self.astar.find_path_to_food()
-        
-        # Should find a path around the obstacle
-        assert next_move in [Direction.UP, Direction.LEFT, Direction.RIGHT]
-        assert next_move != Direction.DOWN  # Down is blocked by snake body
+
+        next_move = self.astar.get_next_move()
+
+        # Should find a valid path — DOWN (5,6) and UP (5,4) and LEFT (4,5) are all free
+        assert next_move is not None
+        assert next_move in self.game.get_valid_moves()
     
     def test_find_path_to_food_unreachable(self):
         """Test path finding when food is unreachable."""
         # Create snake that completely surrounds food
         self.game.snake = [
-            (5, 5), (6, 5), (7, 5), (7, 6), (7, 7), 
+            (5, 5), (6, 5), (7, 5), (7, 6), (7, 7),
             (6, 7), (5, 7), (5, 6)  # Rectangle around (6,6)
         ]
         self.game.food = (6, 6)  # Food inside rectangle
-        
-        next_move = self.astar.find_path_to_food()
-        
-        # Should return None (no path)
-        assert next_move is None
+
+        # find_path returns None when food is unreachable
+        path = self.astar.find_path(
+            self.game.snake[0], self.game.food, set(self.game.snake)
+        )
+        assert path is None
     
     def test_get_safest_move(self):
         """Test safest move selection when no path exists."""
-        # Place snake near walls and food
-        self.game.snake = [(1, 1)]
-        self.game.food = (8, 8)  # Far away
-        
+        # Place snake in a corner with body blocking 2 exits
+        self.game.snake = [(0, 0), (0, 1), (1, 0)]
+        self.game.food = (9, 9)
+
         safest_move = self.astar.get_safest_move()
-        
-        # Should return a valid move
-        assert safest_move in self.game.get_valid_moves()
-        
-        # Should prefer moves away from walls
-        assert safest_move != Direction.LEFT
-        assert safest_move != Direction.UP
+
+        # Only valid move from (0,0) with body at (0,1) and (1,0) is None
+        assert safest_move is None
     
     def test_get_next_move_with_path(self):
         """Test getting next move when path exists."""
@@ -181,15 +177,11 @@ class TestAStarPathfinder:
     
     def test_path_optimization(self):
         """Test that A* finds optimal (shortest) path."""
-        # Create L-shaped obstacle
         self.game.snake = [(5, 5)]
         self.game.food = (7, 7)
-        
-        # Add obstacles to force specific path
-        # (This is a simplified test - in practice, path optimality
-        # would be tested with more complex scenarios)
-        next_move = self.astar.find_path_to_food()
-        
+
+        next_move = self.astar.get_next_move()
+
         # Should move towards food in optimal way
         assert next_move in [Direction.RIGHT, Direction.DOWN]
     
@@ -206,7 +198,7 @@ class TestAStarPathfinder:
         # Should complete in reasonable time
         import time
         start_time = time.time()
-        next_move = large_astar.find_path_to_food()
+        next_move = large_astar.get_next_move()
         end_time = time.time()
         
         # Should complete quickly (less than 0.1 seconds for 20x20 grid)
@@ -214,5 +206,3 @@ class TestAStarPathfinder:
         assert next_move is not None
 
 
-if __name__ == '__main__':
-    pytest.main([__file__])

@@ -109,6 +109,7 @@
                 </div>
                 <div class="btn-group">
                     <button id="trainBtn" class="btn btn-train" title="Train Q-Learning (2000 episodes)">Train RL</button>
+                    <button id="resetQBtn" class="btn btn-danger" title="Wipe Q-table and start fresh">Reset Q-Table</button>
                     <button id="compareBtn" class="btn btn-compare" title="Compare algorithms over 10 games">Compare ×10</button>
                     <button id="compareDetailedBtn" class="btn btn-compare" title="Compare algorithms over 50 games">Compare ×50</button>
                 </div>
@@ -145,7 +146,7 @@
                         <span id="algoTag" class="algo-tag algo-tag-astar">A*</span>
                     </div>
                     <div class="canvas-wrap">
-                        <canvas id="gameCanvas" width="300" height="300"></canvas>
+                        <canvas id="gameCanvas" width="380" height="380"></canvas>
                         <div id="overlayMsg" class="overlay-msg" style="display:none">
                             <div class="overlay-inner">
                                 <span id="overlayText"></span>
@@ -214,7 +215,7 @@
                         </div>
                         <div class="race-canvas-wrap">
                             <div class="race-canvas-inner">
-                                <canvas id="astarCanvas" width="300" height="300"></canvas>
+                                <canvas id="astarCanvas" width="380" height="380"></canvas>
                                 <div id="astarOverlay" class="overlay-msg" style="display:none">
                                     <div class="overlay-inner"><span id="astarOverlayText"></span></div>
                                 </div>
@@ -257,7 +258,7 @@
                         </div>
                         <div class="race-canvas-wrap">
                             <div class="race-canvas-inner">
-                                <canvas id="rlCanvas" width="300" height="300"></canvas>
+                                <canvas id="rlCanvas" width="380" height="380"></canvas>
                                 <div id="rlOverlay" class="overlay-msg" style="display:none">
                                     <div class="overlay-inner"><span id="rlOverlayText"></span></div>
                                 </div>
@@ -312,6 +313,46 @@
                 </div>
             </section>
 
+            <!-- ANALYTICS SECTION -->
+            <section id="analyticsSection" class="analytics-section">
+                <div class="panel-header">
+                    <span class="panel-title">PERFORMANCE ANALYTICS</span>
+                    <button id="refreshAnalyticsBtn" class="icon-btn-sm" title="Refresh">↻</button>
+                </div>
+                <div class="analytics-metrics">
+                    <div class="analytics-card analytics-card-menthe">
+                        <span class="analytics-label">A* AVG SCORE</span>
+                        <span class="analytics-value" id="astarAvg">—</span>
+                    </div>
+                    <div class="analytics-card analytics-card-bleu">
+                        <span class="analytics-label">RL AVG SCORE</span>
+                        <span class="analytics-value" id="rlAvg">—</span>
+                    </div>
+                    <div class="analytics-card analytics-card-lavande">
+                        <span class="analytics-label">A* BEST</span>
+                        <span class="analytics-value" id="astarBest">—</span>
+                    </div>
+                    <div class="analytics-card analytics-card-peche">
+                        <span class="analytics-label">RL BEST</span>
+                        <span class="analytics-value" id="rlBest">—</span>
+                    </div>
+                </div>
+                <div class="analytics-charts-row">
+                    <div class="analytics-chart-panel">
+                        <span class="analytics-chart-label">SCORE DISTRIBUTION</span>
+                        <div class="analytics-chart-wrap">
+                            <canvas id="distributionChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="analytics-chart-panel">
+                        <span class="analytics-chart-label">RECENT SCORES</span>
+                        <div class="analytics-chart-wrap">
+                            <canvas id="historyLineChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- COMPARISON PANEL -->
             <section id="comparisonResults" class="comparison-panel" style="display:none">
                 <div class="panel-header">
@@ -347,6 +388,7 @@
     </div>
 
     <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none"></canvas>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
     <script src="/static/main.js"></script>
 </body>
 </html>

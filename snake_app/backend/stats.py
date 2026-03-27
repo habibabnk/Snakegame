@@ -128,7 +128,7 @@ class StatisticsManager:
 
             start_time = time.time()
             steps = 0
-            max_steps = 500
+            max_steps = 300
 
             while not game.game_over and steps < max_steps:
                 next_move = astar.get_next_move()
@@ -162,7 +162,7 @@ class StatisticsManager:
 
             start_time = time.time()
             steps = 0
-            max_steps = 500
+            max_steps = 300
 
             while not game.game_over and steps < max_steps:
                 next_move = rl_agent.get_next_move()

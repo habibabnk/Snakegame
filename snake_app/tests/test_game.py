@@ -3,7 +3,6 @@ Unit tests for Snake Game module.
 Tests core game logic, collision detection, and state management.
 """
 
-import pytest
 import sys
 import os
 
@@ -191,5 +190,3 @@ class TestSnakeGame:
             assert 0 <= food[1] < self.game.grid_size
 
 
-if __name__ == '__main__':
-    pytest.main([__file__])

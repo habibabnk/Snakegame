@@ -264,15 +264,16 @@ h1 {
 /* ===== CONTROLS BAR ===== */
 .controls-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
     background: var(--surface);
     border: 1.5px solid var(--border);
     border-radius: var(--radius);
-    padding: 14px 20px;
+    padding: 12px 16px;
     margin-bottom: 20px;
     box-shadow: var(--shadow-sm);
+    overflow-x: auto;
 }
 
 .label-text {
@@ -307,9 +308,9 @@ h1 {
 
 .btn {
     font-family: var(--font-ui);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
-    padding: 8px 18px;
+    padding: 7px 13px;
     border: 1.5px solid transparent;
     border-radius: 20px;
     cursor: pointer;
@@ -455,6 +456,11 @@ h1 {
     box-shadow: inset 0 0 20px rgba(47,43,40,0.04);
 }
 
+#astarCanvas, #rlCanvas {
+    width: 300px;
+    height: 300px;
+}
+
 .overlay-msg {
     position: absolute;
     inset: 16px;
@@ -541,7 +547,7 @@ h1 {
 
 .metric-card {
     background: var(--surface);
-    padding: 16px 20px;
+    padding: 10px 14px;
     transition: background 0.15s, transform 0.1s;
     cursor: default;
 }
@@ -575,11 +581,11 @@ h1 {
 .metric-decision { grid-column: 1 / -1; }
 
 .metric-value-sm {
-    font-size: 20px;
+    font-size: 16px;
 }
 
 .metric-value {
-    font-size: 30px;
+    font-size: 24px;
     font-weight: 800;
     color: var(--text);
     line-height: 1;
@@ -1108,4 +1114,95 @@ h1 {
     .header-top-row { justify-content: space-between; }
     .shortcut-grid { grid-template-columns: auto 1fr auto 1fr; }
     .settings-grid { grid-template-columns: 1fr; }
+}
+
+/* ─── LOADING SPINNER ────────────────────────────────────────────────────── */
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--menthe-dark);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── ANALYTICS SECTION ──────────────────────────────────────────────────── */
+.analytics-section {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+}
+
+.analytics-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.analytics-card {
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.analytics-card-menthe  { background: var(--menthe); }
+.analytics-card-bleu    { background: var(--bleu); }
+.analytics-card-lavande { background: var(--lavande); }
+.analytics-card-peche   { background: var(--peche); }
+
+.analytics-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--secondary);
+    display: block;
+    margin-bottom: 6px;
+}
+
+.analytics-value {
+    font-size: 28px;
+    font-weight: 800;
+    display: block;
+}
+
+.analytics-card-menthe  .analytics-value { color: var(--menthe-dark); }
+.analytics-card-bleu    .analytics-value { color: var(--bleu-dark); }
+.analytics-card-lavande .analytics-value { color: var(--lavande-dark); }
+.analytics-card-peche   .analytics-value { color: var(--peche-dark); }
+
+.analytics-charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.analytics-chart-panel {
+    background: var(--panel);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+}
+
+.analytics-chart-wrap {
+    position: relative;
+    height: 200px;
+}
+
+.analytics-chart-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--secondary);
+    display: block;
+    margin-bottom: 12px;
+}
+
+@media (max-width: 720px) {
+    .analytics-metrics { grid-template-columns: repeat(2, 1fr); }
+    .analytics-charts-row { grid-template-columns: 1fr; }
 }

@@ -3,7 +3,6 @@ Unit tests for Q-Learning module.
 Tests state representation, Q-value updates, and action selection.
 """
 
-import pytest
 import sys
 import os
 
@@ -73,14 +72,16 @@ class TestQLearningAgent:
     
     def test_q_value_initialization(self):
         """Test Q-value initialization for new states."""
+        # Clear any loaded Q-table so the state is genuinely new
+        self.agent.q_table = {}
         state_key = ((1, 1), (False, False, False, False))
-        
+
         # Get Q-value for new state-action pair
         q_value = self.agent.get_q_value(state_key, Direction.UP)
-        
+
         # Should initialize to 0.0
         assert q_value == 0.0
-        
+
         # Should create entry in Q-table
         assert state_key in self.agent.q_table
         assert Direction.UP in self.agent.q_table[state_key]
@@ -322,5 +323,3 @@ class TestQLearningAgent:
         assert action is None
 
 
-if __name__ == '__main__':
-    pytest.main([__file__])

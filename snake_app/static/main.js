@@ -5,7 +5,7 @@
 
 // ─── CONSTANTS ──────────────────────────────────────────────────────────────
 const GRID_SIZE  = 10;
-const CELL_SIZE  = 30;
+const CELL_SIZE  = 38;
 const CANVAS_SIZE = GRID_SIZE * CELL_SIZE;
 const SPEED_MAP  = [null, 500, 350, 250, 180, 130, 90, 60, 35, 20, 10];
 
@@ -485,6 +485,16 @@ function setupEventListeners() {
     runBtn.addEventListener('click',   () => { sound.click(); handleRun(); });
     stopBtn.addEventListener('click',  () => { sound.click(); handleStop(); });
     trainBtn.addEventListener('click', () => { sound.click(); trainRL(); });
+    document.getElementById('resetQBtn')?.addEventListener('click', () => {
+        sound.click();
+        if (!confirm('Wipe the Q-table and start fresh?')) return;
+        fetch('/api/reset_qtable', { method: 'POST' })
+            .then(() => {
+                rewardHistory = [];
+                rewardChart.load([], [], [], 2000);
+                setStatus(gameStatusEl, '● Q-TABLE RESET', 'ready');
+            });
+    });
     compareBtn.addEventListener('click', () => { sound.click(); runComparison(10); });
     compareDetailedBtn.addEventListener('click', () => { sound.click(); runComparison(50); });
 
@@ -1549,10 +1559,15 @@ async function runComparison(numGames) {
 
     compareBtn.disabled = true;
     compareDetailedBtn.disabled = true;
+    compareBtn.textContent = 'Running…';
     panel.style.display = 'block';
     banner.className = 'winner-banner';
+    banner.textContent = '';
     tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--secondary)">
-        Running ${numGames} games per algorithm…</td></tr>`;
+        <div class="loading-spinner"></div>
+        Running ${numGames} games per algorithm…<br>
+        <small style="color:var(--secondary)">This may take 10–30 seconds</small>
+    </td></tr>`;
 
     try {
         const resp = await fetch('/api/compare', {
@@ -1560,17 +1575,21 @@ async function runComparison(numGames) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ num_games: numGames })
         });
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const result = await resp.json();
+        if (!resp.ok) throw new Error(result.error || `HTTP ${resp.status}`);
         gamesEl.textContent = `${numGames} games each`;
         displayResults(result);
+        loadAnalyticsCharts();
     } catch (e) {
         console.error('Compare error:', e);
-        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--rose-dark);padding:16px">
-            ✗ Error: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--rose-dark);padding:16px;text-align:center">
+            ✗ Error: ${e.message}<br><small>Check the server console for details</small>
+        </td></tr>`;
+        banner.textContent = '';
     } finally {
         compareBtn.disabled = false;
         compareDetailedBtn.disabled = false;
+        compareBtn.textContent = 'Compare ×10';
     }
 }
 
@@ -1646,10 +1665,155 @@ async function loadHistoryFromDB() {
 // ─── UTILS ────────────────────────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+// ─── ANALYTICS CHARTS ─────────────────────────────────────────────────────────
+let distributionChart = null;
+let historyLineChart  = null;
+
+async function loadAnalyticsCharts() {
+    // Wait for Chart.js CDN to be ready (it's loaded async from CDN)
+    if (typeof Chart === 'undefined') {
+        setTimeout(loadAnalyticsCharts, 200);
+        return;
+    }
+    try {
+        // Fetch each algorithm separately so the limit applies independently —
+        // avoids one algorithm crowding out the other in the top-50 results.
+        const [astarResp, rlResp] = await Promise.all([
+            fetch('/api/history?algorithm=astar&limit=50'),
+            fetch('/api/history?algorithm=rl&limit=50'),
+        ]);
+        const astarJson = await astarResp.json();
+        const rlJson    = await rlResp.json();
+
+        // Summaries come back in every response regardless of algorithm filter
+        if (astarJson.astar_summary) {
+            document.getElementById('astarAvg').textContent  = astarJson.astar_summary.avg_score  != null ? astarJson.astar_summary.avg_score  : '—';
+            document.getElementById('astarBest').textContent = astarJson.astar_summary.max_score  != null ? astarJson.astar_summary.max_score  : '—';
+        }
+        if (rlJson.rl_summary) {
+            document.getElementById('rlAvg').textContent  = rlJson.rl_summary.avg_score  != null ? rlJson.rl_summary.avg_score  : '—';
+            document.getElementById('rlBest').textContent = rlJson.rl_summary.max_score  != null ? rlJson.rl_summary.max_score  : '—';
+        }
+
+        const astarScores = (astarJson.scores || []).map(s => s.score);
+        const rlScores    = (rlJson.scores    || []).map(s => s.score);
+
+        drawDistributionChart(astarScores, rlScores);
+        drawHistoryLineChart(astarScores, rlScores);
+    } catch (e) {
+        console.error('Analytics load error:', e);
+    }
+}
+
+function drawDistributionChart(astarScores, rlScores) {
+    const ctx = document.getElementById('distributionChart');
+    if (!ctx) return;
+
+    function bucket(scores) {
+        const b = [0, 0, 0, 0];
+        scores.forEach(s => {
+            if      (s <= 5)  b[0]++;
+            else if (s <= 10) b[1]++;
+            else if (s <= 15) b[2]++;
+            else              b[3]++;
+        });
+        return b;
+    }
+
+    const astarBuckets = bucket(astarScores);
+    const rlBuckets    = bucket(rlScores);
+
+    if (distributionChart) distributionChart.destroy();
+
+    distributionChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['0–5', '6–10', '11–15', '16+'],
+            datasets: [
+                {
+                    label: 'A*', data: astarBuckets, backgroundColor: '#5aaa92',
+                    borderColor: '#4a9a82', borderWidth: 1, borderRadius: 4,
+                    barPercentage: 0.8, categoryPercentage: 0.7
+                },
+                {
+                    label: 'RL', data: rlBuckets, backgroundColor: '#5a96c9',
+                    borderColor: '#4a86b9', borderWidth: 1, borderRadius: 4,
+                    barPercentage: 0.8, categoryPercentage: 0.7
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'top', labels: { boxWidth: 12, padding: 16, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label(ctx) {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(0) : 0;
+                            return `${ctx.dataset.label}: ${ctx.raw} games (${pct}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    suggestedMax: Math.max(...astarBuckets, ...rlBuckets, 5) * 1.2,
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { stepSize: 1, font: { size: 11 } }
+                },
+                x: { grid: { display: false }, ticks: { font: { size: 11 } } }
+            }
+        }
+    });
+}
+
+function drawHistoryLineChart(astarData, rlData) {
+    const ctx = document.getElementById('historyLineChart');
+    if (!ctx) return;
+
+    const maxLen = Math.max(astarData.length, rlData.length, 1);
+    const labels    = Array.from({ length: maxLen }, (_, i) => i + 1);
+
+    if (historyLineChart) historyLineChart.destroy();
+
+    historyLineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'A*', data: astarData,
+                    borderColor: '#5aaa92', backgroundColor: 'rgba(90,170,146,0.1)',
+                    fill: true, tension: 0.3, pointRadius: 3
+                },
+                {
+                    label: 'RL', data: rlData,
+                    borderColor: '#5a96c9', backgroundColor: 'rgba(90,150,201,0.1)',
+                    fill: true, tension: 0.3, pointRadius: 3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                x: { title: { display: true, text: 'Game #', font: { size: 11 } }, grid: { display: false } }
+            }
+        }
+    });
+}
+
 // ─── BOOT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     drawHistoryChart();
     init();
+    loadAnalyticsCharts();
+    document.getElementById('refreshAnalyticsBtn').addEventListener('click', loadAnalyticsCharts);
     // draw empty state placeholder after chart is instantiated
     setTimeout(() => rewardChart && rewardChart.draw(), 0);
 });

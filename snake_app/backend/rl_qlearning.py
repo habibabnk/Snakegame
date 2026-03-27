@@ -228,26 +228,32 @@ class QLearningAgent:
             steps += 1
         
         self.training_episodes += 1
-        
-        # Decay epsilon for less exploration over time
-        if self.training_episodes % 100 == 0:
-            self.epsilon = max(0.01, self.epsilon * 0.995)
-        
         return total_reward, self.game.score
-    
-    def train(self, episodes: int = 500) -> list:
+
+    def train(self, episodes: int = 2000, reset_epsilon: bool = True) -> list:
         """
         Train agent for multiple episodes.
 
         Args:
             episodes: Number of training episodes
+            reset_epsilon: Reset epsilon to 1.0 for full exploration at session start
 
         Returns:
             Training history as list of dicts (sampled every 100 episodes)
         """
+        if reset_epsilon:
+            self.epsilon = 1.0
+
+        epsilon_decay = 0.995
+        min_epsilon = 0.05
+
         history = []
         for episode in range(episodes):
             total_reward, score = self.train_episode()
+
+            # Decay epsilon each episode
+            self.epsilon = max(min_epsilon, self.epsilon * epsilon_decay)
+
             if (episode + 1) % 100 == 0 or episode == episodes - 1:
                 history.append({
                     'episode': self.training_episodes,
@@ -256,7 +262,6 @@ class QLearningAgent:
                     'epsilon': round(self.epsilon, 4)
                 })
 
-        # Save trained Q-table
         self.save_q_table()
         return history
     
