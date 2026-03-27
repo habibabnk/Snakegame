@@ -47,12 +47,14 @@ class TestSnakeGame:
     
     def test_move_snake_valid_move(self):
         """Test valid snake movement."""
+        # Force food away from the snake's path to avoid a flaky eat
+        self.game.food = (0, 0)
         initial_score = self.game.score
         initial_length = len(self.game.snake)
-        
+
         # Move right (should be valid)
         ate_food = self.game.move_snake(Direction.RIGHT)
-        
+
         assert not ate_food
         assert self.game.score == initial_score
         assert len(self.game.snake) == initial_length
@@ -72,12 +74,12 @@ class TestSnakeGame:
     
     def test_move_snake_self_collision(self):
         """Test self-collision detection."""
-        # Create snake that will collide with itself
-        self.game.snake = [(5, 5), (4, 5), (3, 5), (3, 4)]
-        
-        # Try to move into body
-        ate_food = self.game.move_snake(Direction.UP)
-        
+        # Snake curls so moving DOWN puts head on (5, 6) which is body
+        self.game.snake = [(5, 5), (5, 6), (4, 6), (4, 5)]
+
+        # Moving DOWN: new head = (5+0, 5+1) = (5, 6) → collides with body
+        ate_food = self.game.move_snake(Direction.DOWN)
+
         assert not ate_food
         assert self.game.game_over
     

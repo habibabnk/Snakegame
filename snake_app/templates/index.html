@@ -15,7 +15,17 @@
             <div class="header-top-row">
                 <div class="header-badge">AI RESEARCH</div>
                 <div class="header-controls-right">
-                    <button id="muteBtn" class="icon-btn sound-btn" title="Toggle sound (M)">♩</button>
+                    <button id="muteBtn" class="icon-btn sound-btn" title="Toggle sound (M)">
+                        <svg class="sound-on-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        </svg>
+                        <svg class="sound-off-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                            <line x1="23" y1="9" x2="17" y2="15"/>
+                            <line x1="17" y1="9" x2="23" y2="15"/>
+                        </svg>
+                    </button>
                     <button id="settingsBtn" class="icon-btn" title="Settings">≡</button>
                 </div>
             </div>
@@ -168,6 +178,10 @@
                             <div class="metric-label">EFF.</div>
                             <div class="metric-value" id="efficiency">—</div>
                         </div>
+                        <div class="metric-card metric-decision">
+                            <div class="metric-label">AVG DECISION</div>
+                            <div class="metric-value metric-value-sm" id="avgDecision">—</div>
+                        </div>
                     </div>
                     <div class="chart-section">
                         <div class="chart-label">SCORE HISTORY (last 20 games)</div>
@@ -215,6 +229,10 @@
                                 <span class="race-metric-label">steps</span>
                                 <span class="race-metric-val" id="astarSteps">0</span>
                             </div>
+                            <div class="race-metric">
+                                <span class="race-metric-label">decision</span>
+                                <span class="race-metric-val race-metric-val-sm" id="astarDecisionTime">—</span>
+                            </div>
                         </div>
                         <div id="astarStatus" class="status-bar status-ready">● READY</div>
                     </div>
@@ -253,6 +271,10 @@
                             <div class="race-metric">
                                 <span class="race-metric-label">steps</span>
                                 <span class="race-metric-val" id="rlSteps">0</span>
+                            </div>
+                            <div class="race-metric">
+                                <span class="race-metric-label">decision</span>
+                                <span class="race-metric-val race-metric-val-sm" id="rlDecisionTime">—</span>
                             </div>
                         </div>
                         <div id="rlStatus" class="status-bar status-ready">● READY</div>
@@ -312,6 +334,16 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Race Winner Modal -->
+    <div id="winnerModal" class="winner-overlay" style="display:none">
+        <div class="winner-card">
+            <div class="winner-badge" id="winnerModalBadge">WINNER</div>
+            <div class="winner-algo" id="winnerModalAlgo">A* Pathfinding</div>
+            <div class="winner-scores" id="winnerModalScores">Score: 0 vs 0</div>
+            <button class="btn btn-secondary" id="closeWinnerModal">Continue</button>
+        </div>
     </div>
 
     <canvas id="confettiCanvas" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999;display:none"></canvas>

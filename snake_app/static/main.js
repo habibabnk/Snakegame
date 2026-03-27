@@ -401,6 +401,14 @@ const overlayText  = document.getElementById('overlayText');
 const bestEl       = document.getElementById('bestScore');
 const bestValEl    = document.getElementById('bestScoreVal');
 
+const avgDecisionEl       = document.getElementById('avgDecision');
+const astarDecisionTimeEl = document.getElementById('astarDecisionTime');
+const rlDecisionTimeEl    = document.getElementById('rlDecisionTime');
+const winnerModalEl       = document.getElementById('winnerModal');
+const winnerModalBadgeEl  = document.getElementById('winnerModalBadge');
+const winnerModalAlgoEl   = document.getElementById('winnerModalAlgo');
+const winnerModalScoresEl = document.getElementById('winnerModalScores');
+
 const raceModeToggle  = document.getElementById('raceModeToggle');
 const singleControls  = document.getElementById('singleControls');
 const raceControls    = document.getElementById('raceControls');
@@ -427,6 +435,17 @@ const astarOverlayEl  = document.getElementById('astarOverlay');
 const rlOverlayEl     = document.getElementById('rlOverlay');
 const astarOverlayText = document.getElementById('astarOverlayText');
 const rlOverlayText   = document.getElementById('rlOverlayText');
+
+// ─── DECISION TIME TRACKING ───────────────────────────────────────────────────
+let decisionTimes = [];
+
+function updateDecisionTime(ms) {
+    if (!avgDecisionEl) return;
+    decisionTimes.push(ms);
+    if (decisionTimes.length > 50) decisionTimes.shift();
+    const avg = decisionTimes.reduce((a, b) => a + b, 0) / decisionTimes.length;
+    avgDecisionEl.textContent = avg.toFixed(2) + 'ms';
+}
 
 const ALGO_INFO = {
     astar: {
@@ -489,6 +508,9 @@ function setupEventListeners() {
     });
 
     // Race controls
+    document.getElementById('closeWinnerModal')?.addEventListener('click', () => {
+        if (winnerModalEl) winnerModalEl.style.display = 'none';
+    });
     raceResetBtn.addEventListener('click', () => { sound.click(); initRace(); });
     raceStartBtn.addEventListener('click', () => { sound.click(); startRaceWithCountdown(); });
     raceStopBtn.addEventListener('click',  () => { sound.click(); stopRace(); });
@@ -587,6 +609,8 @@ async function handleReset() {
         renderer.theme = algorithm === 'rl' ? 'rl' : 'astar';
         renderer._prevFood = gameState.food ? [...gameState.food] : null;
         renderer.eatAnim  = 0;
+        decisionTimes = [];
+        if (avgDecisionEl) avgDecisionEl.textContent = '—';
         resetTimerUI();
         updateUI();
         setStatus(gameStatusEl, '● READY', 'ready');
@@ -613,6 +637,7 @@ async function performStep() {
             body: JSON.stringify({ game_id: 'main', algorithm })
         });
         gameState = await resp.json();
+        if (gameState.decision_time_ms !== undefined) updateDecisionTime(gameState.decision_time_ms);
         updateUI();
         updateTimerUI();
         if (gameState.game_over) {
@@ -861,16 +886,42 @@ function endRace() {
     raceBannerEl.style.display = 'block';
     updateRaceRecord();
     drawRaceChart();
+    showWinnerModal(aS, rS);
+}
+
+function showWinnerModal(aScore, rlScore) {
+    if (!winnerModalEl) return;
+    winnerModalBadgeEl.className = 'winner-badge';
+    if (aScore > rlScore) {
+        winnerModalBadgeEl.textContent = 'WINNER';
+        winnerModalAlgoEl.textContent  = 'A* Pathfinding';
+    } else if (rlScore > aScore) {
+        winnerModalBadgeEl.textContent = 'WINNER';
+        winnerModalBadgeEl.classList.add('rl-winner');
+        winnerModalAlgoEl.textContent  = 'Q-Learning';
+    } else {
+        winnerModalBadgeEl.textContent = 'TIE';
+        winnerModalBadgeEl.classList.add('tie-result');
+        winnerModalAlgoEl.textContent  = 'Equal Performance';
+    }
+    winnerModalScoresEl.textContent = `Score: ${aScore} vs ${rlScore}`;
+    winnerModalEl.style.display = 'flex';
 }
 
 function updateRaceUI() {
     if (raceStates.astar) {
         animateMetric(astarScoreEl, raceStates.astar.score);
         astarStepsEl.textContent = raceStates.astar.steps;
+        if (astarDecisionTimeEl && raceStates.astar.decision_time_ms !== undefined) {
+            astarDecisionTimeEl.textContent = raceStates.astar.decision_time_ms.toFixed(2) + 'ms';
+        }
     }
     if (raceStates.rl) {
         animateMetric(rlScoreEl, raceStates.rl.score);
         rlStepsEl.textContent = raceStates.rl.steps;
+        if (rlDecisionTimeEl && raceStates.rl.decision_time_ms !== undefined) {
+            rlDecisionTimeEl.textContent = raceStates.rl.decision_time_ms.toFixed(2) + 'ms';
+        }
     }
 }
 

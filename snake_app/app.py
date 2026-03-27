@@ -22,6 +22,10 @@ _shared_q_table = {}
 _shared_training_episodes = 0
 _shared_epsilon = 1.0
 
+# Race mode dedicated game instances
+_race_games = {}
+_race_agents = {}
+
 
 @app.route('/')
 def index():
@@ -63,11 +67,13 @@ def step_game():
     if game.game_over:
         return jsonify(game.get_state())
 
+    start_time = time.perf_counter()
     next_move = None
     if algorithm == 'astar' and game_id in astar_agents:
         next_move = astar_agents[game_id].get_next_move()
     elif algorithm == 'rl' and game_id in rl_agents:
         next_move = rl_agents[game_id].get_next_move()
+    decision_time_ms = (time.perf_counter() - start_time) * 1000
 
     if next_move:
         game.move_snake(next_move)
@@ -81,7 +87,9 @@ def step_game():
             steps=game.steps, time_taken=0, game_over=True
         )
 
-    return jsonify(game.get_state())
+    state = game.get_state()
+    state['decision_time_ms'] = round(decision_time_ms, 3)
+    return jsonify(state)
 
 
 @app.route('/api/run', methods=['POST'])
@@ -169,6 +177,8 @@ def compare_algorithms():
     num_games = data.get('num_games', 10)
     stats = stats_manager.run_comparison(num_games, q_table=_shared_q_table or None)
     return jsonify({
+        'astar': stats.get('astar', {}),
+        'rl': stats.get('rl', {}),
         'statistics': stats,
         'winner': stats_manager.get_winner(),
         'num_games': num_games
@@ -203,6 +213,74 @@ def clear_results():
     stats_manager.clear_results()
     get_db().clear_games()
     return jsonify({'status': 'cleared'})
+
+
+@app.route('/api/race/init', methods=['POST'])
+def init_race():
+    global _race_games, _race_agents
+    _race_games['astar'] = SnakeGame()
+    _race_games['rl'] = SnakeGame()
+    _race_games['rl'].food = _race_games['astar'].food  # sync food for fairness
+
+    _race_agents['astar'] = AStarPathfinder(_race_games['astar'])
+    rl_agent = QLearningAgent(_race_games['rl'])
+    if _shared_q_table:
+        rl_agent.q_table = _shared_q_table
+        rl_agent.training_episodes = _shared_training_episodes
+        rl_agent.epsilon = _shared_epsilon
+    _race_agents['rl'] = rl_agent
+
+    return jsonify({
+        'astar': _race_games['astar'].get_state(),
+        'rl': _race_games['rl'].get_state()
+    })
+
+
+@app.route('/api/race/step', methods=['POST'])
+def race_step():
+    if not _race_games:
+        return jsonify({'error': 'Race not initialized'}), 400
+
+    results = {}
+    for algo in ['astar', 'rl']:
+        game = _race_games[algo]
+        agent = _race_agents[algo]
+        if not game.game_over:
+            start = time.perf_counter()
+            action = agent.get_next_move()
+            decision_ms = (time.perf_counter() - start) * 1000
+            if action:
+                game.move_snake(action)
+            elif not game.game_over:
+                game.game_over = True
+            if game.game_over:
+                get_db().save_game(algorithm=algo, score=game.score,
+                                   steps=game.steps, time_taken=0, game_over=True)
+            state = game.get_state()
+            state['decision_time_ms'] = round(decision_ms, 3)
+            results[algo] = state
+        else:
+            results[algo] = game.get_state()
+
+    astar_score = results['astar']['score']
+    rl_score = results['rl']['score']
+    if astar_score > rl_score:
+        results['leader'] = 'astar'
+    elif rl_score > astar_score:
+        results['leader'] = 'rl'
+    else:
+        results['leader'] = 'tie'
+
+    results['race_over'] = results['astar']['game_over'] and results['rl']['game_over']
+    if results['race_over']:
+        if astar_score > rl_score:
+            results['winner'] = 'astar'
+        elif rl_score > astar_score:
+            results['winner'] = 'rl'
+        else:
+            results['winner'] = 'tie'
+
+    return jsonify(results)
 
 
 if __name__ == '__main__':
