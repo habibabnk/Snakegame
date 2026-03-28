@@ -16,8 +16,8 @@ class QLearningAgent:
     Learns optimal policy through trial and error.
     """
     
-    def __init__(self, game: SnakeGame, learning_rate: float = 0.1, 
-                 discount_factor: float = 0.95, epsilon: float = 0.1):
+    def __init__(self, game: SnakeGame, learning_rate: float = 0.2,
+                 discount_factor: float = 0.95, epsilon: float = 1.0):
         """
         Initialize Q-Learning agent.
         
@@ -44,43 +44,38 @@ class QLearningAgent:
     
     def get_state_key(self, state: Dict) -> Tuple:
         """
-        Convert game state to hashable key for Q-table.
-        
-        Args:
-            state: Game state dictionary
-            
-        Returns:
-            Hashable state key tuple
+        Simplified state representation — fast and effective.
         """
         if not state['snake']:
             return ()
-        
+
         head = state['snake'][0]
         food = state['food']
-        
-        # Relative food position from head
-        food_rel = (food[0] - head[0], food[1] - head[1])
-        
-        # Danger detection in each direction
-        danger = {}
-        for direction_name in ['UP', 'DOWN', 'LEFT', 'RIGHT']:
-            direction = Direction[direction_name]
-            dx, dy = direction.value
-            next_pos = (head[0] + dx, head[1] + dy)
-            
-            danger[direction_name] = (
-                next_pos[0] < 0 or next_pos[0] >= self.game.grid_size or
-                next_pos[1] < 0 or next_pos[1] >= self.game.grid_size or
-                next_pos in state['snake']
-            )
-        
-        # Create state key
-        state_key = (
-            food_rel,
-            (danger['UP'], danger['DOWN'], danger['LEFT'], danger['RIGHT'])
+        snake_set = set(map(tuple, state['snake']))
+
+        # 1. Food direction (simplified to 8 directions)
+        dx = food[0] - head[0]
+        dy = food[1] - head[1]
+        food_dir = (
+            0 if dx == 0 else (1 if dx > 0 else -1),
+            0 if dy == 0 else (1 if dy > 0 else -1),
         )
-        
-        return state_key
+
+        # 2. Danger in all 4 directions
+        def is_danger(direction):
+            d = {'UP': (0, -1), 'DOWN': (0, 1), 'LEFT': (-1, 0), 'RIGHT': (1, 0)}[direction]
+            pos = (head[0] + d[0], head[1] + d[1])
+            return (pos[0] < 0 or pos[0] >= self.game.grid_size or
+                    pos[1] < 0 or pos[1] >= self.game.grid_size or
+                    pos in snake_set)
+
+        danger = (is_danger('UP'), is_danger('DOWN'), is_danger('LEFT'), is_danger('RIGHT'))
+
+        # 3. Body length bucket
+        length = len(state['snake'])
+        len_bucket = 0 if length <= 5 else (1 if length <= 15 else 2)
+
+        return (food_dir, danger, len_bucket)
     
     def get_q_value(self, state_key: Tuple, action: Direction) -> float:
         """
@@ -129,43 +124,35 @@ class QLearningAgent:
             ]
             return random.choice(best_actions)
     
-    def calculate_reward(self, old_state: Dict, new_state: Dict, 
+    def calculate_reward(self, old_state: Dict, new_state: Dict,
                         ate_food: bool, game_over: bool) -> float:
         """
-        Calculate reward for state transition.
-        
-        Args:
-            old_state: Previous game state
-            new_state: Current game state
-            ate_food: Whether food was eaten
-            game_over: Whether game is over
-            
-        Returns:
-            Reward value
+        Calculate reward with shaping for long-term learning.
+        Death penalty scales with score; food reward scales with score.
         """
         if game_over:
-            return -100  # Large penalty for game over
-        
+            return -100 - new_state.get('score', 0) * 2
+
         if ate_food:
-            return 50  # Large reward for eating food
-        
-        # Small reward/penalty based on distance to food
+            score = new_state.get('score', 1)
+            return 50 + score * 5
+
         if not old_state['snake'] or not new_state['snake']:
             return -1
-        
+
         old_head = old_state['snake'][0]
         new_head = new_state['snake'][0]
         food = new_state['food']
-        
+
         old_distance = abs(old_head[0] - food[0]) + abs(old_head[1] - food[1])
         new_distance = abs(new_head[0] - food[0]) + abs(new_head[1] - food[1])
-        
+
         if new_distance < old_distance:
-            return 1   # Reward for moving closer
+            return 2
         elif new_distance > old_distance:
-            return -1  # Penalty for moving away
+            return -2
         else:
-            return 0   # No change in distance
+            return -0.5
     
     def update_q_value(self, state_key: Tuple, action: Direction, 
                       reward: float, next_state_key: Tuple) -> None:
@@ -196,70 +183,77 @@ class QLearningAgent:
     def train_episode(self) -> Tuple[float, int]:
         """
         Train agent for one episode.
-        
+
         Returns:
             Tuple of (total_reward, final_score)
         """
         self.game.reset_game()
         total_reward = 0.0
         steps = 0
-        max_steps = self.game.grid_size * self.game.grid_size * 2
-        
+        max_steps = self.game.grid_size * self.game.grid_size * 3
+
         while not self.game.game_over and steps < max_steps:
             old_state = self.game.get_state()
             action = self.choose_action(old_state, training=True)
-            
+
             if action is None:
                 break
-            
-            # Make move
+
             ate_food = self.game.move_snake(action)
             new_state = self.game.get_state()
-            
-            # Calculate reward
+
             reward = self.calculate_reward(old_state, new_state, ate_food, self.game.game_over)
             total_reward += reward
-            
-            # Update Q-value
+
             old_state_key = self.get_state_key(old_state)
             new_state_key = self.get_state_key(new_state)
             self.update_q_value(old_state_key, action, reward, new_state_key)
-            
+
             steps += 1
-        
+
         self.training_episodes += 1
         return total_reward, self.game.score
 
-    def train(self, episodes: int = 2000, reset_epsilon: bool = True) -> list:
+    def train(self, episodes: int = 2000, reset_exploration: bool = True) -> list:
         """
         Train agent for multiple episodes.
 
         Args:
             episodes: Number of training episodes
-            reset_epsilon: Reset epsilon to 1.0 for full exploration at session start
+            reset_exploration: Whether to reset epsilon to 1.0 for fresh exploration
 
         Returns:
             Training history as list of dicts (sampled every 100 episodes)
         """
-        if reset_epsilon:
+        if reset_exploration:
             self.epsilon = 1.0
 
-        epsilon_decay = 0.995
-        min_epsilon = 0.05
+        min_epsilon = 0.01
+        epsilon_decay = (min_epsilon / max(self.epsilon, 0.01)) ** (1.0 / episodes)
 
         history = []
+        recent_scores = []
+        best_score = 0
+
         for episode in range(episodes):
             total_reward, score = self.train_episode()
+            recent_scores.append(score)
+            best_score = max(best_score, score)
+            if len(recent_scores) > 100:
+                recent_scores.pop(0)
 
-            # Decay epsilon each episode
             self.epsilon = max(min_epsilon, self.epsilon * epsilon_decay)
 
             if (episode + 1) % 100 == 0 or episode == episodes - 1:
+                avg_score = sum(recent_scores) / len(recent_scores)
                 history.append({
                     'episode': self.training_episodes,
                     'score': score,
+                    'avg_score': round(avg_score, 2),
+                    'best_score': best_score,
                     'reward': round(total_reward, 2),
-                    'epsilon': round(self.epsilon, 4)
+                    'epsilon': round(self.epsilon, 4),
+                    'q_table_size': len(self.q_table),
                 })
 
         self.save_q_table()

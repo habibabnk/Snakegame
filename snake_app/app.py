@@ -129,19 +129,21 @@ def run_game():
 def train_rl():
     global _shared_q_table, _shared_training_episodes, _shared_epsilon
 
-    data = request.get_json()
+    data = request.get_json() or {}
     episodes = data.get('episodes', 2000)
 
     temp_game = SnakeGame()
     temp_agent = QLearningAgent(temp_game)
 
     if _shared_q_table:
-        temp_agent.q_table = _shared_q_table
+        temp_agent.q_table = _shared_q_table.copy()
         temp_agent.training_episodes = _shared_training_episodes
-        # epsilon is intentionally not carried over — train() resets it to 1.0
+
+    # Always reset epsilon to 1.0 for a full exploration curve each session
+    temp_agent.epsilon = 1.0
 
     start_time = time.time()
-    history = temp_agent.train(episodes, reset_epsilon=True)
+    history = temp_agent.train(episodes, reset_exploration=True)
     training_time = round(time.time() - start_time, 2)
 
     _shared_q_table = temp_agent.q_table
