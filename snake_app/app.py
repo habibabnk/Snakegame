@@ -213,6 +213,21 @@ def get_history():
     })
 
 
+@app.route('/api/protocol', methods=['GET'])
+def get_protocol():
+    return jsonify({
+        'grid_size': 10,
+        'max_steps': 500,
+        'training_episodes': 2000,
+        'reward_food': 50,
+        'reward_death': -100,
+        'epsilon_start': 1.0,
+        'epsilon_end': 0.01,
+        'learning_rate': 0.1,
+        'discount_factor': 0.95
+    })
+
+
 @app.route('/api/stats', methods=['GET'])
 def get_stats():
     return jsonify(stats_manager.get_comparison_stats())

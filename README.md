@@ -142,6 +142,25 @@ Training uses an epsilon-greedy policy starting at full exploration, with epsilo
 
 ---
 
+## Protocole d'évaluation
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Taille de grille | 10×10 |
+| Nombre de parties par test | 50 |
+| Épisodes d'entraînement Q-Learning | 2000 |
+| Max steps par partie | 500 |
+| Récompense nourriture | +50 |
+| Pénalité collision | -100 |
+
+### Métriques mesurées
+- Score moyen
+- Nombre moyen de steps
+- Temps de décision moyen (ms)
+- Taux de succès
+
+---
+
 ## Running Tests
 
 ```bash

@@ -21,6 +21,7 @@ class GameResult:
     time_taken: float
     game_over: bool
     success: bool  # Score > threshold
+    avg_decision_time_ms: float = 0.0
 
 
 class StatisticsManager:
@@ -42,17 +43,19 @@ class StatisticsManager:
             'rl': []
         }
     
-    def record_game_result(self, algorithm: str, score: int, steps: int, 
-                          time_taken: float, game_over: bool) -> None:
+    def record_game_result(self, algorithm: str, score: int, steps: int,
+                          time_taken: float, game_over: bool,
+                          avg_decision_time_ms: float = 0.0) -> None:
         """
         Record result of a single game.
-        
+
         Args:
             algorithm: Algorithm name ('astar' or 'rl')
             score: Final score
             steps: Total steps taken
             time_taken: Time taken in seconds
             game_over: Whether game ended due to collision
+            avg_decision_time_ms: Average per-decision time in milliseconds
         """
         result = GameResult(
             algorithm=algorithm,
@@ -60,9 +63,10 @@ class StatisticsManager:
             steps=steps,
             time_taken=time_taken,
             game_over=game_over,
-            success=score > self.success_threshold
+            success=score > self.success_threshold,
+            avg_decision_time_ms=avg_decision_time_ms,
         )
-        
+
         self.results[algorithm].append(result)
     
     def get_algorithm_stats(self, algorithm: str) -> Dict[str, float]:
@@ -83,7 +87,8 @@ class StatisticsManager:
         steps = [r.steps for r in results]
         times = [r.time_taken for r in results]
         successes = [r.success for r in results]
-        
+        decision_times = [r.avg_decision_time_ms for r in results]
+
         return {
             'avg_score': sum(scores) / len(scores),
             'max_score': max(scores),
@@ -91,7 +96,8 @@ class StatisticsManager:
             'avg_steps': sum(steps) / len(steps),
             'avg_time': sum(times) / len(times),
             'success_rate': sum(successes) / len(successes) * 100,
-            'total_games': len(results)
+            'total_games': len(results),
+            'avg_decision_time_ms': round(sum(decision_times) / len(decision_times), 4),
         }
     
     def get_comparison_stats(self) -> Dict[str, Dict[str, float]]:
@@ -129,9 +135,13 @@ class StatisticsManager:
             start_time = time.time()
             steps = 0
             max_steps = 300
+            decision_times = []
 
             while not game.game_over and steps < max_steps:
+                t0 = time.perf_counter()
                 next_move = astar.get_next_move()
+                t1 = time.perf_counter()
+                decision_times.append((t1 - t0) * 1000)
                 if next_move:
                     game.move_snake(next_move)
                 else:
@@ -140,7 +150,8 @@ class StatisticsManager:
                 steps += 1
 
             time_taken = time.time() - start_time
-            self.record_game_result('astar', game.score, steps, time_taken, game.game_over)
+            avg_decision_ms = sum(decision_times) / len(decision_times) if decision_times else 0
+            self.record_game_result('astar', game.score, steps, time_taken, game.game_over, avg_decision_ms)
             db.save_game(algorithm='astar', score=game.score, steps=steps,
                          time_taken=time_taken, game_over=game.game_over)
 
@@ -163,9 +174,13 @@ class StatisticsManager:
             start_time = time.time()
             steps = 0
             max_steps = 300
+            decision_times = []
 
             while not game.game_over and steps < max_steps:
+                t0 = time.perf_counter()
                 next_move = rl_agent.get_next_move()
+                t1 = time.perf_counter()
+                decision_times.append((t1 - t0) * 1000)
                 if next_move:
                     game.move_snake(next_move)
                 else:
@@ -174,7 +189,8 @@ class StatisticsManager:
                 steps += 1
 
             time_taken = time.time() - start_time
-            self.record_game_result('rl', game.score, steps, time_taken, game.game_over)
+            avg_decision_ms = sum(decision_times) / len(decision_times) if decision_times else 0
+            self.record_game_result('rl', game.score, steps, time_taken, game.game_over, avg_decision_ms)
             db.save_game(algorithm='rl', score=game.score, steps=steps,
                          time_taken=time_taken, game_over=game.game_over)
 

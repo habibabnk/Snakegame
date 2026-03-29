@@ -36,22 +36,26 @@ class TestQLearningAgent:
         # Create specific game state
         self.game.snake = [(5, 5)]
         self.game.food = (7, 6)
-        
+
         state = self.game.get_state()
         state_key = self.agent.get_state_key(state)
-        
-        # Should be a tuple
+
+        # Should be a tuple with 3 elements: (food_dir, danger, len_bucket)
         assert isinstance(state_key, tuple)
-        assert len(state_key) == 2
-        
-        # First part should be relative food position
-        food_rel = state_key[0]
-        assert food_rel == (2, 1)  # (7-5, 6-5)
-        
-        # Second part should be danger detection
+        assert len(state_key) == 3
+
+        # First part: simplified food direction (-1/0/1 per axis)
+        food_dir = state_key[0]
+        assert food_dir == (1, 1)  # dx=2>0→1, dy=1>0→1
+
+        # Second part: danger in 4 absolute directions
         danger = state_key[1]
         assert len(danger) == 4
         assert all(isinstance(d, bool) for d in danger)
+
+        # Third part: body length bucket
+        len_bucket = state_key[2]
+        assert len_bucket == 0  # snake length 1 → bucket 0
     
     def test_state_key_with_danger(self):
         """Test state key with danger detection."""
@@ -165,46 +169,50 @@ class TestQLearningAgent:
         old_state = self.game.get_state()
         self.game.food = (6, 5)  # Place food in front of snake
         new_state = self.game.get_state()
-        
+
         reward = self.agent.calculate_reward(old_state, new_state, True, False)
-        
-        assert reward == 50  # Large reward for eating food
+
+        # Reward = 50 + score * 5; score is 0 at game start → 50
+        assert reward == 50 + new_state.get('score', 0) * 5
+        assert reward >= 50
     
     def test_reward_calculation_game_over(self):
         """Test reward calculation when game is over."""
         old_state = self.game.get_state()
         new_state = self.game.get_state()
         new_state['game_over'] = True
-        
+
         reward = self.agent.calculate_reward(old_state, new_state, False, True)
-        
-        assert reward == -100  # Large penalty for game over
+
+        # Penalty = -100 - score * 2; score 0 at start → -100
+        assert reward == -100 - new_state.get('score', 0) * 2
+        assert reward <= -100
     
     def test_reward_calculation_closer_to_food(self):
         """Test reward calculation when moving closer to food."""
         self.game.snake = [(5, 5)]
         self.game.food = (7, 5)
-        
+
         old_state = self.game.get_state()
         self.game.move_snake(Direction.RIGHT)  # Move closer
         new_state = self.game.get_state()
-        
+
         reward = self.agent.calculate_reward(old_state, new_state, False, False)
-        
-        assert reward == 1  # Small reward for moving closer
-    
+
+        assert reward == 2  # Reward for moving closer
+
     def test_reward_calculation_further_from_food(self):
         """Test reward calculation when moving away from food."""
         self.game.snake = [(5, 5)]
         self.game.food = (7, 5)
-        
+
         old_state = self.game.get_state()
         self.game.move_snake(Direction.LEFT)  # Move away
         new_state = self.game.get_state()
-        
+
         reward = self.agent.calculate_reward(old_state, new_state, False, False)
-        
-        assert reward == -1  # Small penalty for moving away
+
+        assert reward == -2  # Penalty for moving away
     
     def test_q_value_update(self):
         """Test Q-value update rule."""
