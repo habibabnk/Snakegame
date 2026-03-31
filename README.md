@@ -12,7 +12,7 @@ This project compares a deterministic search algorithm against a learned policy.
 
 ## Features
 
-- ** A* Pathfinding** — Manhattan heuristic with flood-fill safety check to prevent self-trapping
+- **Astar Pathfinding** — Manhattan heuristic with flood-fill safety check to prevent self-trapping
 - **Q-Learning Agent** — Tabular Q-learning with epsilon-greedy exploration and epsilon decay
 - **Interactive controls** — Step through moves manually or run at adjustable speed (1x to 10x)
 - **Training panel** — Train the RL agent for 2000 episodes with a live progress bar and reward curve
